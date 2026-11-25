@@ -1,0 +1,29 @@
+name: Build Fracture
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DFRACTURE_COPY_PLUGIN=OFF
+      - name: Build
+        run: cmake --build build --config Release --parallel
+      - name: Ad-hoc sign (macOS)
+        if: runner.os == 'macOS'
+        run: codesign --force --deep -s - build/Fracture_artefacts/Release/VST3/Fracture.vst3
+      - name: Package
+        shell: bash
+        run: |
+          mkdir out
+          cp -R build/Fracture_artefacts/Release/VST3/Fracture.vst3 out/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Fracture-VST3-${{ runner.os }}
+          path: out
